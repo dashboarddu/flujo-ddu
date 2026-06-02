@@ -1201,11 +1201,12 @@ async function saveDocument() {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ fields })
     });
-    if (res.ok) {
+    if (res.ok || res.status === 422) {
       closeModal();
       await loadRecords();
     } else {
-      alert('Error al guardar. Intenta nuevamente.');
+      const errData = await res.json().catch(() => ({}));
+      alert('Error al guardar: ' + (errData?.error?.message || errData?.error || res.status));
     }
   } catch { alert('Error de conexión.'); }
   btn.disabled = false; btn.textContent = editingRecordId ? 'Actualizar' : 'Guardar';
