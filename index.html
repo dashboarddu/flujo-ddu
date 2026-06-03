@@ -643,7 +643,7 @@
         </select>
         <select class="filter-select" id="filter-etapa">
           <option value="">Todas las etapas</option>
-          <option>Redacción origen</option>
+          <option>Redacción Unidad/Dpto de Origen</option>
           <option>Revisión Jefe de Departamento</option>
           <option>Revisión Asesoría Jurídica DDU</option>
           <option>Revisión Jefe DDU</option>
@@ -658,7 +658,7 @@
           <option>Baja</option>
         </select>
         <select class="filter-select" id="filter-proyecto">
-          <option value="">Todos los proyectos</option>
+          <option value="">Todas las tareas</option>
           <option>PEH</option>
           <option>Modif. OGUC</option>
           <option>Ordinario</option>
@@ -712,7 +712,7 @@
           <canvas id="chart-estados" height="220"></canvas>
         </div>
         <div class="chart-card">
-          <div class="chart-title">Documentos por proyecto estratégico</div>
+          <div class="chart-title">Documentos por tarea estratégica</div>
           <canvas id="chart-proyectos" height="220"></canvas>
         </div>
         <div class="chart-card">
@@ -736,18 +736,23 @@
       </div>
       <div class="form-group">
         <label class="form-label">Tipo de documento</label>
-        <select class="form-select" id="f-tipo">
+        <select class="form-select" id="f-tipo" onchange="toggleOtroTipo(this)">
           <option value="">Seleccionar...</option>
           <option>Decreto</option><option>Resolución</option><option>Oficio</option>
           <option>Memo</option><option>Providencia</option><option>Correo</option><option>Otro</option>
         </select>
+        <input class="form-input" id="f-tipo-otro" placeholder="Especificar tipo..." style="display:none;margin-top:6px">
       </div>
       <div class="form-group full">
         <label class="form-label">Materia</label>
         <input class="form-input" id="f-materia" placeholder="Resumen ejecutivo del documento">
       </div>
+      <div class="form-group full">
+        <label class="form-label">Descripcion</label>
+        <input class="form-input" id="f-descripcion" placeholder="Descripción detallada del documento">
+      </div>
       <div class="form-group">
-        <label class="form-label">Proyecto estratégico</label>
+        <label class="form-label">Origen de la importancia</label>
         <select class="form-select" id="f-proyecto">
           <option value="">Seleccionar...</option>
           <option>PEH</option><option>Modif. OGUC</option>
@@ -781,7 +786,7 @@
         <label class="form-label">Etapa actual</label>
         <select class="form-select" id="f-etapa">
           <option value="">Seleccionar...</option>
-          <option>Redacción origen</option>
+          <option>Redacción Unidad/Dpto de Origen</option>
           <option>Revisión Jefe de Departamento</option>
           <option>Revisión Asesoría Jurídica DDU</option>
           <option>Revisión Jefe DDU</option>
@@ -936,9 +941,8 @@ function buildTable(records, container) {
     <table>
       <thead>
         <tr>
-          <th>ID</th><th>Tipo</th><th>Materia</th><th>Proyecto</th>
-          <th>Etapa actual</th><th>Responsable</th><th>Deadline</th>
-          <th>Importancia</th><th>Estado</th><th>Iter.</th><th></th>
+          <th>ID</th><th>Tipo Doc.</th><th>Materia</th><th>Descripcion</th><th>Tarea</th>
+          <th>Etapa actual</th><th>Responsable</th><th>Importancia</th><th>Estado</th><th>Observaciones</th><th></th>
         </tr>
       </thead>
       <tbody>
@@ -946,14 +950,14 @@ function buildTable(records, container) {
           <tr>
             <td><span class="id-mono">${r.ID_Interno || '—'}</span></td>
             <td>${r.Tipo_Doc || '—'}</td>
-            <td style="max-width:200px">${r.Materia || '—'}</td>
-            <td>${r.Proyecto_Estratégico || '—'}</td>
+            <td style="max-width:160px">${r.Materia || '—'}</td>
+            <td style="max-width:160px;font-size:12px;color:var(--text2)">${r.Descripcion || '—'}</td>
+            <td>${r.Origen_Importancia || '—'}</td>
             <td style="font-size:12px">${r.Etapa_Actual || '—'}</td>
             <td style="font-size:12px">${r.Responsable_Actual || '—'}</td>
-            <td style="font-family:var(--font-mono);font-size:12px">${r.Fecha_Deadline || '—'}</td>
             <td><span class="badge ${r.Importancia || ''}">${r.Importancia || '—'}</span></td>
             <td><span class="semaforo ${r._alerta}">${r._alerta}</span></td>
-            <td style="text-align:center">${r.Contador_Iteraciones || 0}</td>
+            <td style="max-width:160px;font-size:12px;color:var(--text2)">${r.Observaciones || '—'}</td>
             <td><button class="action-btn" onclick="openEditModal('${r.id}')">Editar</button></td>
           </tr>
         `).join('')}
@@ -994,7 +998,7 @@ function applyFilters() {
     if (estado && r._alerta !== estado) return false;
     if (etapa && r.Etapa_Actual !== etapa) return false;
     if (importancia && r.Importancia !== importancia) return false;
-    if (proyecto && r.Proyecto_Estratégico !== proyecto) return false;
+    if (proyecto && r.Origen_Importancia !== proyecto) return false;
     return true;
   });
 
@@ -1004,7 +1008,7 @@ function applyFilters() {
 // ── KANBAN ───────────────────────────────────────────────────
 
 const ETAPAS = [
-  'Redacción origen',
+  'Redacción Unidad/Dpto de Origen',
   'Revisión Jefe de Departamento',
   'Revisión Asesoría Jurídica DDU',
   'Revisión Jefe DDU',
@@ -1090,8 +1094,8 @@ function renderCharts() {
   });
 
   // Chart 3: por proyecto
-  const proyectos = ['PEH','Modif. OGUC','Ordinario','Gestión General'];
-  const proyCounts = proyectos.map(p => allRecords.filter(r => r.Proyecto_Estratégico === p).length);
+  const proyectos = ['PEH','Modif. OGUC','Ordinario','Gestión General']; // Origen_Importancia
+  const proyCounts = proyectos.map(p => allRecords.filter(r => r.Origen_Importancia === p).length);
   if (charts.proyectos) charts.proyectos.destroy();
   charts.proyectos = new Chart(document.getElementById('chart-proyectos'), {
     type: 'bar',
@@ -1134,12 +1138,19 @@ function switchTab(name) {
 
 // ── MODAL ─────────────────────────────────────────────────────
 
+function toggleOtroTipo(sel) {
+  const otro = document.getElementById('f-tipo-otro');
+  otro.style.display = sel.value === 'Otro' ? 'block' : 'none';
+  if (sel.value !== 'Otro') otro.value = '';
+}
+
 function openNewModal() {
   editingRecordId = null;
   document.getElementById('modal-title').textContent = 'Nuevo documento';
   document.getElementById('modal-save-btn').textContent = 'Guardar';
-  ['f-id','f-materia','f-responsable','f-observaciones'].forEach(id => document.getElementById(id).value = '');
+  ['f-id','f-materia','f-descripcion','f-responsable','f-observaciones','f-tipo-otro'].forEach(id => document.getElementById(id).value = '');
   ['f-tipo','f-proyecto','f-importancia','f-origen','f-etapa'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-tipo-otro').style.display = 'none';
   document.getElementById('f-iteraciones').value = 0;
   document.getElementById('f-ingreso').value = new Date().toISOString().split('T')[0];
   document.getElementById('f-deadline').value = '';
@@ -1153,9 +1164,23 @@ function openEditModal(recordId) {
   document.getElementById('modal-title').textContent = 'Editar documento';
   document.getElementById('modal-save-btn').textContent = 'Actualizar';
   document.getElementById('f-id').value = r.ID_Interno || '';
-  document.getElementById('f-tipo').value = r.Tipo_Doc || '';
+  const tipoVal = r.Tipo_Doc || '';
+  const tipoOpts = ['Decreto','Resolución','Oficio','Memo','Providencia','Correo','Otro'];
+  if (tipoOpts.includes(tipoVal)) {
+    document.getElementById('f-tipo').value = tipoVal;
+    document.getElementById('f-tipo-otro').style.display = 'none';
+    document.getElementById('f-tipo-otro').value = '';
+  } else if (tipoVal) {
+    document.getElementById('f-tipo').value = 'Otro';
+    document.getElementById('f-tipo-otro').style.display = 'block';
+    document.getElementById('f-tipo-otro').value = tipoVal;
+  } else {
+    document.getElementById('f-tipo').value = '';
+    document.getElementById('f-tipo-otro').style.display = 'none';
+  }
   document.getElementById('f-materia').value = r.Materia || '';
-  document.getElementById('f-proyecto').value = r.Proyecto_Estratégico || '';
+  document.getElementById('f-descripcion').value = r.Descripcion || '';
+  document.getElementById('f-proyecto').value = r.Origen_Importancia || '';
   document.getElementById('f-importancia').value = r.Importancia || '';
   document.getElementById('f-ingreso').value = r.Fecha_Ingreso || '';
   document.getElementById('f-deadline').value = r.Fecha_Deadline || '';
@@ -1172,11 +1197,15 @@ function closeModal() {
 }
 
 async function saveDocument() {
+  const tipoSelect = document.getElementById('f-tipo').value;
+  const tipoOtro = document.getElementById('f-tipo-otro').value.trim();
+  const tipoFinal = tipoSelect === 'Otro' && tipoOtro ? tipoOtro : tipoSelect;
   const fields = {
     ID_Interno: document.getElementById('f-id').value,
-    Tipo_Doc: document.getElementById('f-tipo').value,
+    Tipo_Doc: tipoFinal,
     Materia: document.getElementById('f-materia').value,
-    Proyecto_Estratégico: document.getElementById('f-proyecto').value,
+    Descripcion: document.getElementById('f-descripcion').value,
+    Origen_Importancia: document.getElementById('f-proyecto').value,
     Importancia: document.getElementById('f-importancia').value,
     Fecha_Ingreso: document.getElementById('f-ingreso').value,
     Fecha_Deadline: document.getElementById('f-deadline').value,
