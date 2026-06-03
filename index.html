@@ -1244,7 +1244,7 @@ function exportPDF() {
   doc.setTextColor(240, 92, 92);
   doc.text(`Vencidos: ${allRecords.filter(r=>r._alerta==='Rojo').length}`, 14, 55);
   doc.setTextColor(245, 200, 66);
-  doc.text(`Por vencer (≤2 días): ${allRecords.filter(r=>r._alerta==='Amarillo').length}`, 14, 62);
+  doc.text(`Por vencer (2 dias o menos): ${allRecords.filter(r=>r._alerta==='Amarillo').length}`, 14, 62);
   doc.setTextColor(74, 222, 128);
   doc.text(`Al día: ${allRecords.filter(r=>r._alerta==='Verde').length}`, 14, 69);
 
